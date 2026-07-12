@@ -172,7 +172,7 @@ body {
         padding: 4px 6px;
     }
 
-    /* Paksa layout modul dua kolom menjadi 1 kolom penuh di HP */
+    /* layout modul dua kolom menjadi 1 kolom penuh di HP */
     div[style*="grid-template-columns: 1fr 2fr;"],
     div[style*="grid-template-columns: 1fr 1fr;"],
     .grid {
