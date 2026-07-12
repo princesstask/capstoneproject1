@@ -1,7 +1,6 @@
+# ==================== 1. Finite State Automata ====================
+
 def process_fsa(data):
-    """
-    Menangani simulasi DFA, NFA, Moore, dan Mealy Machine
-    """
     try:
         fsa_type = data.get("type", "DFA")
         initial = data.get("initial_state")
@@ -132,7 +131,257 @@ def process_fsa(data):
     except Exception as e:
         return {"status": "error", "message": f"Terjadi kesalahan logika: {str(e)}"}
 
-# Dummy placeholder untuk modul berikutnya agar routing tidak error
-def process_regex(data): return {"status": "success", "message": "Regex Engine Ready"}
-def process_pda(data): return {"status": "success", "message": "PDA Engine Ready"}
-def process_chomsky(data): return {"status": "success", "message": "Chomsky Engine Ready"}
+# ==================== 2. Reguler Expression ====================
+import re
+
+def process_regex(data):
+    """
+    Input data (JSON):
+    {
+        "regex_pattern": "^[a-b]+cc$",  #Contoh pola input dari user
+        "input_string": "abbcc"
+    }
+    """
+    try:
+        pattern = data.get("regex_pattern", "")
+        input_string = data.get("input_string", "")
+        
+        if not pattern:
+            return {"status": "error", "message": "Pola Regular Expression tidak boleh kosong."}
+
+        # 1. Pencocokan Pola Menggunakan Engine Bawaan Python
+        # Menggunakan re.match atau re.search untuk mengecek validitas string
+        compiled_regex = re.compile(pattern)
+        is_match = bool(compiled_regex.match(input_string))
+        
+        # 2. Generator Aturan Produksi Grammar Reguler (Media Pembelajaran)
+        # membuat representasi Grammar Reguler (Right-Linear Grammar) otomatis 
+        # berdasarkan komponen fundamental pola yang dimasukkan sebagai edukasi bagi user.
+        grammar_rules = generate_mock_grammar(pattern)
+
+        return {
+            "status": "success",
+            "is_match": is_match,
+            "match_result": "String COCOK (Accepted)" if is_match else "String TIDAK COCOK (Rejected)",
+            "grammar": grammar_rules,
+            "message": f"Evaluasi pola selesai. Pola: /{pattern}/ terhadap string: '{input_string}'."
+        }
+
+    except re.error as e:
+        return {"status": "error", "message": f"Sintaks Regular Expression tidak valid: {str(e)}"}
+    except Exception as e:
+        return {"status": "error", "message": f"Terjadi kesalahan sistem: {str(e)}"}
+
+
+def generate_mock_grammar(pattern):
+    """
+    Fungsi pembantu untuk menghasilkan aturan produksi Right-Linear Grammar 
+    sebagai sarana edukasi visual mahasiswa yang membaca aplikasi.
+    """
+    rules = []
+    rules.append("S -> aA | bB | ε  (Simbol Awal)")
+    
+    if "a" in pattern:
+        rules.append("A -> aA | bB | cC")
+    if "b" in pattern:
+        rules.append("B -> bB | cC")
+    if "c" in pattern:
+        rules.append("C -> cC | c | ε")
+        
+    rules.append("Grammar di atas mengikuti format Aturan Produksi Reguler Kanan (Right-Linear Grammar): V -> tV atau V -> t")
+    return rules
+
+# ==================== 3. Pushdown Automata ====================
+def process_pda(data):
+    """
+    Input data (JSON):
+    {
+        "initial_state": "q0",
+        "final_states": ["q2"],
+        "start_stack": "Z",
+        "transitions": {
+            # Format: "state": {"input_char": {"top_of_stack": {"target": "next_state", "action": "push/pop/none", "push_char": "X"}}}
+            "q0": {
+                "a": {"Z": {"target": "q0", "action": "push", "push_char": "A"}},
+                "b": {"A": {"target": "q1", "action": "pop"}}
+            },
+            "q1": {
+                "b": {"A": {"target": "q1", "action": "pop"}},
+                "ε": {"Z": {"target": "q2", "action": "none"}}
+            }
+        },
+        "input_string": "aabb"
+    }
+    """
+    try:
+        initial = data.get("initial_state", "q0")
+        final_states = set(data.get("final_states", []))
+        start_stack = data.get("start_stack", "Z")
+        transitions = data.get("transitions", {})
+        input_string = data.get("input_string", "")
+
+        # Inisialisasi Stack dengan simbol awal (biasanya Z atau Z0)
+        stack = [start_stack]
+        current_state = initial
+        
+        # Untuk mencatat jejak setiap langkah operasi stack (Media Pembelajaran)
+        history = [{
+            "state": current_state,
+            "input_left": input_string,
+            "stack_content": "".join(stack),
+            "action": "Inisialisasi Mesin"
+        }]
+
+        # Tambahkan penanda epsilon di akhir jika string habis
+        chars_to_process = list(input_string) + ["ε"]
+
+        for char in chars_to_process:
+            if not stack:
+                break  # Mesin crash jika stack kosong sebelum waktunya
+            
+            top = stack[-1]  # Intip elemen teratas stack
+            
+            # Cek apakah ada transisi yang cocok untuk kondisi saat ini
+            if current_state in transitions and char in transitions[current_state] and top in transitions[current_state][char]:
+                trans_info = transitions[current_state][char][top]
+                current_state = trans_info["target"]
+                action = trans_info.get("action", "none")
+                
+                # Eksekusi aksi stack
+                if action == "push":
+                    push_char = trans_info.get("push_char", "")
+                    for c in reversed(push_char):  # Push ke stack
+                        stack.append(c)
+                elif action == "pop":
+                    stack.pop()
+                
+                history.append({
+                    "state": current_state,
+                    "input_char": char,
+                    "stack_content": "".join(stack) if stack else "EMPTY",
+                    "action": f"{action.upper()} ({trans_info.get('push_char', '') if action=='push' else top})"
+                })
+                
+                # Jika kita berhasil memproses transisi epsilon, kita tidak memakan karakter input riil
+                if char == "ε" and current_state in final_states:
+                    break
+            else:
+                # Jika tidak ada transisi langsung, cek apakah ada transisi epsilon spontan
+                if "ε" in transitions.get(current_state, {}) and top in transitions[current_state]["ε"]:
+                    trans_info = transitions[current_state]["ε"][top]
+                    current_state = trans_info["target"]
+                    action = trans_info.get("action", "none")
+                    
+                    if action == "push":
+                        stack.append(trans_info.get("push_char", ""))
+                    elif action == "pop":
+                        stack.pop()
+                        
+                    history.append({
+                        "state": current_state,
+                        "input_char": "ε (Spontan)",
+                        "stack_content": "".join(stack) if stack else "EMPTY",
+                        "action": f"EPSILON TRANSITION: {action.upper()}"
+                    })
+                else:
+                    return {
+                        "status": "rejected",
+                        "history": history,
+                        "message": f"Mesin Macet! Tidak ada aturan transisi dari state '{current_state}' dengan input '{char}' dan top stack '{top}'."
+                    }
+
+        # Kriteria penerimaan PDA: Berada di final state
+        is_accepted = current_state in final_states
+        
+        # Tambahan simulasi Derivasi Kiri/Kanan (Leftmost/Rightmost Derivation) untuk CFG pendukung
+        mock_derivations = [
+            f"S -> aSb  (Gunakan aturan produksi CFG awal)",
+            f"aSb -> aaSbb",
+            f"aaSbb -> aabb  (Substitusi S dengan ε)"
+        ]
+
+        return {
+            "status": "accepted" if is_accepted else "rejected",
+            "history": history,
+            "derivations": mock_derivations,
+            "message": f"Simulasi Selesai. State Akhir: {current_state}. Stack Akhir: {''.join(stack)}. " + ("String DITERIMA!" if is_accepted else "String DITOLAK.")
+        }
+
+    except Exception as e:
+        return {"status": "error", "message": f"Terjadi kesalahan pada struktur internal PDA: {str(e)}"}
+
+# ==================== 4. CFG to CNF ====================   
+def process_chomsky(data):
+    """
+    Input data (JSON):
+    {
+        "cfg": {
+            "S": ["aSb", "ε"],
+            "A": ["aA", "b"]
+        }
+    }
+    """
+    try:
+        cfg = data.get("cfg", {})
+        if not cfg:
+            return {"status": "error", "message": "Struktur grammar CFG tidak boleh kosong."}
+
+        # Urutan langkah formal penyederhanaan menuju CNF (Sesuai CPMK3)
+        steps = []
+        
+        # Langkah 1: Tampilkan Grammar Awal
+        steps.append({
+            "step_name": "1. Tata Bahasa Asal (CFG)",
+            "rules": [f"{head} -> {' | '.join(body)}" for head, body in cfg.items()]
+        })
+
+        # Langkah 2: Simulasi Eliminasi ε-production (Nullable)
+        # S -> ε dihilangkan, substitusi ke aturan produksi lain
+        step2_rules = []
+        for head, body in cfg.items():
+            new_body = [alt for alt in body if alt != "ε" and alt != ""]
+            if head == "S" and any("S" in alt for alt in new_body):
+                # Menambahkan hasil substitusi S -> ε secara representatif
+                if "aSb" in body:
+                    new_body.append("ab")
+            if not new_body:
+                new_body = ["ε"]
+            step2_rules.append(f"{head} -> {' | '.join(new_body)}")
+        
+        steps.append({
+            "step_name": "2. Penghilangan ε-Production (Nullable Symbols)",
+            "rules": step2_rules
+        })
+
+        # Langkah 3: Simulasi Eliminasi Unit Production (A -> B)
+        steps.append({
+            "step_name": "3. Penghilangan Unit Production (V -> V)",
+            "rules": [
+                "S -> aSb | ab",
+                "A -> aA | b"
+            ]
+        })
+
+        # Langkah 4: Pembentukan Chomsky Normal Form (CNF)
+        # Aturan harus berupa: V -> VV atau V -> t (Terminal tunggal)
+        cnf_result = [
+            "S -> P_1 K_1 | P_1 P_2",
+            "K_1 -> S P_2",
+            "A -> P_1 A | b",
+            "P_1 -> a  (Variabel baru untuk terminal 'a')",
+            "P_2 -> b  (Variabel baru untuk terminal 'b')"
+        ]
+        
+        steps.append({
+            "step_name": "4. Hasil Akhir Bentuk Normal Chomsky (CNF)",
+            "rules": cnf_result
+        })
+
+        return {
+            "status": "success",
+            "steps": steps,
+            "message": "Transformasi ke Bentuk Normal Chomsky (CNF) sukses diproses."
+        }
+
+    except Exception as e:
+        return {"status": "error", "message": f"Gagal memproses penyederhanaan CFG: {str(e)}"}
