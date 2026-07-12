@@ -1,30 +1,16 @@
 def process_fsa(data):
     """
-    Menangani simulasi DFA dan NFA
-    Input data (JSON): 
-    {
-        "type": "DFA" atau "NFA",
-        "states": ["q0", "q1", "q2"],
-        "alphabet": ["0", "1"],
-        "initial_state": "q0",
-        "final_states": ["q2"],
-        "transitions": {
-            "q0": {"0": "q0", "1": "q1"},
-            "q1": {"0": "q2", "1": "q1"},
-            "q2": {"0": "q2", "1": "q2"}
-        }, # Catatan: Untuk NFA, value dari simbol adalah list target state, misal: "0": ["q0", "q1"]
-        "input_string": "010"
-    }
+    Menangani simulasi DFA, NFA, Moore, dan Mealy Machine
     """
     try:
         fsa_type = data.get("type", "DFA")
         initial = data.get("initial_state")
-        final_states = set(data.get("final_states", []))
-        transitions = data.get("transitions", {})
         input_string = data.get("input_string", "")
+        transitions = data.get("transitions", {})
 
-        # --- SIMULASI DFA ---
+# ==================== 1. SIMULASI DFA ====================
         if fsa_type == "DFA":
+            final_states = set(data.get("final_states", []))
             current_state = initial
             trace = [current_state]
 
@@ -36,27 +22,26 @@ def process_fsa(data):
                     return {
                         "status": "rejected",
                         "trace": trace,
-                        "message": f"String ditolak: Tidak ada transisi dari {current_state} dengan simbol '{char}'."
+                        "message": f"Ditolak: Tidak ada transisi dari {current_state} dengan simbol '{char}'."
                     }
             
             is_accepted = current_state in final_states
             return {
                 "status": "accepted" if is_accepted else "rejected",
                 "trace": trace,
-                "message": f"Selesai di state {current_state}. " + ("String DITERIMA!" if is_accepted else "String DITOLAK karena bukan final state.")
+                "message": f"Selesai di state {current_state}. " + ("String DITERIMA!" if is_accepted else "String DITOLAK.")
             }
 
-        # --- SIMULASI NFA ---
+# ==================== 2. SIMULASI NFA ====================
         elif fsa_type == "NFA":
-            # NFA melacak sekumpulan state aktif sekaligus (current states set)
+            final_states = set(data.get("final_states", []))
             current_states = {initial}
-            trace = [[initial]]  # Melacak perkembangan kumpulan state aktif
+            trace = [[initial]]
 
             for char in input_string:
                 next_states = set()
                 for state in current_states:
                     if state in transitions and char in transitions[state]:
-                        # transitions[state][char] diasumsikan berupa list/array untuk NFA
                         targets = transitions[state][char]
                         if isinstance(targets, list):
                             next_states.update(targets)
@@ -64,26 +49,88 @@ def process_fsa(data):
                             next_states.add(targets)
                 
                 if not next_states:
-                    trace.append(["DITOLAK (Macet)"])
+                    trace.append(["Macet"])
                     return {
                         "status": "rejected",
                         "trace": trace,
-                        "message": f"String ditolak: Mesin macet, tidak ada transisi yang valid untuk simbol '{char}'."
+                        "message": f"Ditolak: Mesin macet pada simbol '{char}'."
                     }
                 
                 current_states = next_states
                 trace.append(list(current_states))
 
-            # Cek apakah ada salah satu state aktif yang merupakan final state
             is_accepted = any(state in final_states for state in current_states)
             return {
                 "status": "accepted" if is_accepted else "rejected",
                 "trace": trace,
-                "message": f"State akhir yang dicapai: {list(current_states)}. " + ("String DITERIMA!" if is_accepted else "String DITOLAK.")
+                "message": f"State akhir: {list(current_states)}. " + ("String DITERIMA!" if is_accepted else "String DITOLAK.")
+            }
+
+# ==================== 3. MOORE MACHINE ====================
+        elif fsa_type == "Moore":
+            # Moore membutuhkan kamus output untuk tiap state. Contoh: {"q0": "0", "q1": "1"}
+            state_outputs = data.get("state_outputs", {})
+            current_state = initial
+            
+            # Moore menghasilkan output awal dari initial state bahkan sebelum membaca input
+            output_generated = state_outputs.get(current_state, "")
+            trace = [current_state]
+
+            for char in input_string:
+                if current_state in transitions and char in transitions[current_state]:
+                    current_state = transitions[current_state][char]
+                    trace.append(current_state)
+                    output_generated += state_outputs.get(current_state, "")
+                else:
+                    return {
+                        "status": "error",
+                        "trace": trace,
+                        "message": f"Simulasi terhenti: Tidak ada transisi dari {current_state} untuk input '{char}'."
+                    }
+            
+            return {
+                "status": "success",
+                "trace": trace,
+                "output": output_generated,
+                "message": f"Simulasi Moore selesai. Output yang dihasilkan: {output_generated}"
+            }
+
+# ==================== 4. MEALY MACHINE ====================
+        elif fsa_type == "Mealy":
+            # Mealy menyimpan output di dalam transisi. 
+            # Contoh struktur: {"q0": {"0": {"target": "q1", "output": "Z"}}}
+            current_state = initial
+            output_generated = ""
+            trace = [current_state]
+
+            for char in input_string:
+                if current_state in transitions and char in transitions[current_state]:
+                    trans_info = transitions[current_state][char]
+                    
+                    # Mengambil target state dan output dari transisi
+                    if isinstance(trans_info, dict) and "target" in trans_info:
+                        current_state = trans_info["target"]
+                        output_generated += trans_info.get("output", "")
+                    else:
+                        return {"status": "error", "message": "Format transisi Mealy di back-end salah."}
+                    
+                    trace.append(current_state)
+                else:
+                    return {
+                        "status": "error",
+                        "trace": trace,
+                        "message": f"Simulasi terhenti: Tidak ada transisi dari {current_state} untuk input '{char}'."
+                    }
+            
+            return {
+                "status": "success",
+                "trace": trace,
+                "output": output_generated,
+                "message": f"Simulasi Mealy selesai. Output yang dihasilkan: {output_generated}"
             }
 
     except Exception as e:
-        return {"status": "error", "message": f"Input tidak valid atau rusak: {str(e)}"}
+        return {"status": "error", "message": f"Terjadi kesalahan logika: {str(e)}"}
 
 # Dummy placeholder untuk modul berikutnya agar routing tidak error
 def process_regex(data): return {"status": "success", "message": "Regex Engine Ready"}
