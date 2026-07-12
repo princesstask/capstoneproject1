@@ -1,0 +1,113 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="modul-header">
+        <a href="/" class="btn-back">&larr; Kembali</a>
+        <h2>Modul Regular Expression (Regex)</h2>
+    </div>
+    <p>Uji kecocokan pola Regular Expression terhadap string input dan pelajari aturan tata bahasa reguler yang setara.</p>
+
+    <div class="grid" style="grid-template-columns: 1fr 2fr;">
+        <!-- Panel Input Pola Regex -->
+        <div class="card">
+            <h3>Input Pola & String</h3>
+            <hr style="border: 1px solid var(--secondary-color); margin-bottom: 15px;">
+            
+            <form id="regex-form">
+                <div style="margin-bottom: 12px;">
+                    <label style="display:block; font-weight:bold; margin-bottom:5px;">Pola Regex (Python Syntax):</label>
+                    <input type="text" id="regex-pattern" value="^[a-b]+cc$" placeholder="Contoh: ^[a-b]+cc$" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;" required>
+                    <small style="color: #666; display: block; margin-top: 4px;">Gunakan ^ dan $ untuk mencocokkan string secara utuh.</small>
+                </div>
+                
+                <div style="margin-bottom: 12px;">
+                    <label style="display:block; font-weight:bold; margin-bottom:5px;">String Uji:</label>
+                    <input type="text" id="regex-string" value="abbcc" placeholder="Contoh: abbcc" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;" required>
+                </div>
+
+                <button type="submit" class="btn" style="width: 100%; margin-top: 15px;">Evaluasi Pola</button>
+            </form>
+        </div>
+
+        <!-- Panel Hasil & Media Pembelajaran Tata Bahasa -->
+        <div class="card" style="border-top-color: var(--primary-color);">
+            <h3>Analisis & Aturan Produksi Grammar</h3>
+            <hr style="border: 1px solid var(--secondary-color); margin-bottom: 15px;">
+            
+            <div id="regex-result-container" style="display: none; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+                <h4 id="regex-status" style="margin-top: 0;"></h4>
+                <p id="regex-message"></p>
+            </div>
+
+            <div id="grammar-container" style="display: none;">
+                <h5>Aturan Produksi Grammar Reguler (Right-Linear):</h5>
+                <div id="grammar-rules" style="font-family: monospace; background: #333; color: #fff; padding: 15px; border-radius: 4px; white-space: pre-line; line-height: 1.6;">
+                    -
+                </div>
+            </div>
+            
+            <div id="regex-placeholder" style="color: #888; text-align: center; padding: 4rem 0;">
+                Masukkan pola regex dan string uji, lalu klik "Evaluasi Pola" untuk melihat visualisasi tata bahasa formal.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('regex-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const pattern = document.getElementById('regex-pattern').value;
+    const inputString = document.getElementById('regex-string').value;
+    
+    try {
+        const response = await fetch('/regex', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                regex_pattern: pattern,
+                input_string: inputString
+            })
+        });
+        
+        const result = await response.json();
+        
+        document.getElementById('regex-placeholder').style.display = 'none';
+        
+        const resBox = document.getElementById('regex-result-container');
+        const statusEl = document.getElementById('regex-status');
+        const messageEl = document.getElementById('regex-message');
+        const grammarBox = document.getElementById('grammar-container');
+        const grammarRules = document.getElementById('grammar-rules');
+        
+        resBox.style.display = 'block';
+        messageEl.innerText = result.message;
+        
+        if (result.status === "success") {
+            grammarBox.style.display = 'block';
+            grammarRules.innerText = result.grammar.join('\n');
+            
+            if (result.is_match) {
+                resBox.style.backgroundColor = "#e6f4ea";
+                statusEl.innerText = "MATCH / ACCEPTED";
+                statusEl.style.color = "#137333";
+            } else {
+                resBox.style.backgroundColor = "#fce8e6";
+                statusEl.innerText = "MISMATCH / REJECTED";
+                statusEl.style.color = "#c5221f";
+            }
+        } else {
+            // Jika ada syntax error pada regex
+            resBox.style.backgroundColor = "#fce8e6";
+            statusEl.innerText = "ERROR SINTAKS";
+            statusEl.style.color = "#c5221f";
+            grammarBox.style.display = 'none';
+        }
+        
+    } catch (err) {
+        alert("Gagal menghubungi server: " + err.message);
+    }
+});
+</script>
+{% endblock %}

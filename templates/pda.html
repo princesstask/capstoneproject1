@@ -1,0 +1,156 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="modul-header">
+        <a href="/" class="btn-back">&larr; Kembali</a>
+        <h2>Modul Pushdown Automata & CFG</h2>
+    </div>
+    <p>Simulasikan otomata dengan memori tambahan (Stack) untuk mengenali Context-Free Language.</p>
+
+    <div class="grid" style="grid-template-columns: 1fr 2fr;">
+        <!-- Panel Kontrol Input -->
+        <div class="card">
+            <h3>Input String Konten</h3>
+            <hr style="border: 1px solid var(--secondary-color); margin-bottom: 15px;">
+            
+            <form id="pda-form">
+                <div style="margin-bottom: 12px;">
+                    <label style="display:block; font-weight:bold; margin-bottom:5px;">String Uji (Bahasa $a^n b^n$):</label>
+                    <input type="text" id="pda-string" value="aabb" placeholder="Contoh: aabb atau aaabbb" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;" required>
+                    <small style="color: #666; display: block; margin-top: 4px;">Mesin dikonfigurasi untuk mencocokkan jumlah 'a' yang diikuti jumlah 'b' yang sama.</small>
+                </div>
+
+                <button type="submit" class="btn" style="width: 100%; margin-top: 15px;">Mulai Trace Stack</button>
+            </form>
+        </div>
+
+        <!-- Panel Visualisasi Stack & Derivasi CFG -->
+        <div class="card" style="border-top-color: var(--primary-color);">
+            <h3>Visualisasi Jejak Komputasi Stack</h3>
+            <hr style="border: 1px solid var(--secondary-color); margin-bottom: 15px;">
+            
+            <div id="pda-result-container" style="display: none; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+                <h4 id="pda-status" style="margin-top: 0;"></h4>
+                <p id="pda-message"></p>
+            </div>
+
+            <div id="pda-details" style="display: none;" class="grid" style="grid-template-columns: 1fr 1fr; margin-top: 0;">
+                <!-- Tabel Operasi Memori Stack -->
+                <div>
+                    <h5>Tabel Transisi & Stack:</h5>
+                    <table style="width:100%; border-collapse: collapse; font-size: 0.9rem; text-align: left;">
+                        <thead>
+                            <tr style="background-color: var(--secondary-color);">
+                                <th style="padding: 6px; border: 1px solid #ccc;">State</th>
+                                <th style="padding: 6px; border: 1px solid #ccc;">Input</th>
+                                <th style="padding: 6px; border: 1px solid #ccc;">Isi Stack</th>
+                                <th style="padding: 6px; border: 1px solid #ccc;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stack-table-body">
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Proses Derivasi Kiri/Kanan (CFG) -->
+                <div>
+                    <h5>Leftmost Derivation (CFG):</h5>
+                    <div id="cfg-derivations" style="font-family: monospace; background: #333; color: #fff; padding: 12px; border-radius: 4px; line-height: 1.6;">
+                    </div>
+                </div>
+            </div>
+            
+            <div id="pda-placeholder" style="color: #888; text-align: center; padding: 4rem 0;">
+                Silakan klik tombol "Mulai Trace Stack" untuk melihat visualisasi isi memori *push/pop* secara berurutan.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Data konfigurasi transisi formal yang sinkron dengan engine backend
+const pdaConfig = {
+    initial_state: "q0",
+    final_states: ["q2"],
+    start_stack: "Z",
+    transitions: {
+        "q0": {
+            "a": {"Z": {"target": "q0", "action": "push", "push_char": "A"},
+                  "A": {"target": "q0", "action": "push", "push_char": "A"}},
+            "b": {"A": {"target": "q1", "action": "pop"}}
+        },
+        "q1": {
+            "b": {"A": {"target": "q1", "action": "pop"}},
+            "ε": {"Z": {"target": "q2", "action": "none"}}
+        }
+    }
+};
+
+document.getElementById('pda-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const inputString = document.getElementById('pda-string').value;
+    const payload = {
+        ...pdaConfig,
+        input_string: inputString
+    };
+    
+    try {
+        const response = await fetch('/pda', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        const result = await response.json();
+        
+        document.getElementById('pda-placeholder').style.display = 'none';
+        document.getElementById('pda-details').style.display = 'grid';
+        
+        const resBox = document.getElementById('pda-result-container');
+        const statusEl = document.getElementById('pda-status');
+        const messageEl = document.getElementById('pda-message');
+        
+        resBox.style.display = 'block';
+        messageEl.innerText = result.message;
+        
+        if (result.status === "accepted") {
+            resBox.style.backgroundColor = "#e6f4ea";
+            statusEl.innerText = "STRING DITERIMA (Valid)";
+            statusEl.style.color = "#137333";
+        } else {
+            resBox.style.backgroundColor = "#fce8e6";
+            statusEl.innerText = "STRING DITOLAK (Invalid)";
+            statusEl.style.color = "#c5221f";
+        }
+        
+        // Render baris tabel histori stack
+        const tbody = document.getElementById('stack-table-body');
+        tbody.innerHTML = '';
+        if (result.history) {
+            result.history.forEach(step => {
+                const row = `<tr>
+                    <td style="padding: 6px; border: 1px solid #ccc;">${step.state}</td>
+                    <td style="padding: 6px; border: 1px solid #ccc;">${step.input_char || '&epsilon;'}</td>
+                    <td style="padding: 6px; border: 1px solid #ccc; font-family: monospace;"><strong>${step.stack_content}</strong></td>
+                    <td style="padding: 6px; border: 1px solid #ccc; font-size:0.8rem;">${step.action}</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+        
+        // FIX: Menggunakan result.derivation (sesuai output dari backend)
+        const derivBox = document.getElementById('cfg-derivations');
+        if (result.derivation && result.derivation.length > 0) {
+            derivBox.innerHTML = result.derivation.join('<br> &rArr; ');
+        } else {
+            derivBox.innerHTML = "Tidak ada log derivasi.";
+        }
+        
+    } catch (err) {
+        alert("Gagal melakukan simulasi: " + err.message);
+    }
+});
+</script>
+{% endblock %}

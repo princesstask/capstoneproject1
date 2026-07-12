@@ -1,0 +1,69 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<!-- Hero Section Proyek Capstone -->
+<section class="hero">
+    <h1 style="font-size: 2.5rem; margin-bottom: 10px;">Simulator & Media Pembelajaran Teori Bahasa dan Automata</h1>
+    <p style="font-size: 1.2rem; max-width: 800px; margin: 0 auto 20px auto; opacity: 0.9;">
+        Platform interaktif berbasis Web Flask untuk memodelkan, menyimulasikan, dan menganalisis konsep mesin otomata serta tata bahasa formal secara visual dan praktis.</p>
+    </div>
+</section>
+
+<!-- Kontainer Utama Kartu Modul -->
+<div class="container">
+    <div style="text-align: center; margin-bottom: 40px;">
+        <h2>4 Modul Pembelajaran Wajib</h2>
+        <p style="color: #555;">Silakan pilih salah satu modul di bawah ini untuk mulai belajar dan menguji string pada simulator.</p>
+    </div>
+
+    <div class="grid">
+        <!-- Card 1: FSA -->
+        <div class="card">
+            <div style="font-size: 2rem; margin-bottom: 10px;"></div>
+            <h3>Finite State Automata</h3>
+            <p style="font-size: 0.95rem; color: #444; line-height: 1.5; margin-bottom: 20px;">
+                Eksplorasi mesin pengenal string otomatis tanpa memori. Dilengkapi dengan 4 tab simulator interaktif: <strong>DFA, NFA, Moore,</strong> dan <strong>Mealy</strong>.
+            </p>
+            <a href="/fsa" class="btn" style="width: 100%; text-align: center; box-sizing: border-box;">Buka Simulator FSA</a>
+        </div>
+
+        <!-- Card 2: Regular Expression -->
+        <div class="card">
+            <div style="font-size: 2rem; margin-bottom: 10px;"></div>
+            <h3>Regular Expression</h3>
+            <p style="font-size: 0.95rem; color: #444; line-height: 1.5; margin-bottom: 20px;">
+                Pelajari pencocokan pola string (Regex) beserta generatator otomatis aturan produksi <strong>Grammar Reguler Kanan (Right-Linear Grammar)</strong> yang setara.
+            </p>
+            <a href="/regex" class="btn" style="width: 100%; text-align: center; box-sizing: border-box;">Buka Modul Regex</a>
+        </div>
+
+        <!-- Card 3: Pushdown Automata -->
+        <div class="card">
+            <div style="font-size: 2rem; margin-bottom: 10px;"></div>
+            <h3>Pushdown Automata</h3>
+            <p style="font-size: 0.95rem; color: #444; line-height: 1.5; margin-bottom: 20px;">
+                Simulasikan mekanisme otomata dengan memori tambahan berupa <strong>Stack</strong> (operasi <em>Push/Pop</em>) untuk mengenali Tata Bahasa Bebas Konteks (CFG).
+            </p>
+            <a href="/pda" class="btn" style="width: 100%; text-align: center; box-sizing: border-box;">Buka Modul PDA</a>
+        </div>
+
+        <!-- Card 4: Chomsky Normal Form -->
+        <div class="card">
+            <div style="font-size: 2rem; margin-bottom: 10px;"></div>
+            <h3>Chomsky Normal Form</h3>
+            <p style="font-size: 0.95rem; color: #444; line-height: 1.5; margin-bottom: 20px;">
+                Media pembelajaran algoritma transformasi CFG sembarang menjadi <strong>Bentuk Normal Chomsky (CNF)</strong> langkah demi langkah secara terstruktur.
+            </p>
+            <a href="/chomsky" class="btn" style="width: 100%; text-align: center; box-sizing: border-box;">Buka Modul CNF</a>
+        </div>
+    </div>
+
+    <!-- Informasi Tambahan Pendukung Media Pembelajaran -->
+    <div class="card" style="margin-top: 40px; border-top-color: var(--primary-color); background-color: #fff;">
+        <h3>Tentang Proyek Ini</h3>
+        <p style="line-height: 1.6; color: #333;">
+            Aplikasi web ini dirancang sebagai pemenuhan tugas akhir berbasis <em>Outcome-Based Education (OBE)</em>. Tujuan utamanya adalah menjembatani teori matematika formal yang abstrak dalam perkuliahan <strong>Teori Bahasa dan Automata</strong> agar lebih mudah dipahami melalui visualisasi komputasi langsung di peramban web.
+        </p>
+    </div>
+</div>
+{% endblock %}

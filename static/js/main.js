@@ -39,7 +39,15 @@ const defaultData = {
     }
 };
 
-// Fungsi Kontrol Navigasi Tab Visual
+// Objek lokal untuk menyimpan riwayat hasil eksekusi tiap tipe mesin secara terpisah
+const simulationCache = {
+    DFA: null,
+    NFA: null,
+    Moore: null,
+    Mealy: null
+};
+
+// Fungsi Kontrol Navigasi Tab Visual (Telah Diperbaiki)
 function switchTab(tabType) {
     // Ubah status tombol aktif
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -49,9 +57,42 @@ function switchTab(tabType) {
     document.getElementById('fsa-type').value = tabType;
     document.getElementById('panel-title').innerText = `Konfigurasi Mesin ${tabType}`;
     
-    // Bersihkan kontainer hasil lama
-    document.getElementById('result-container').style.display = 'none';
-    document.getElementById('placeholder-text').style.display = 'block';
+    // Cek apakah tab ini sudah pernah dijalankan sebelumnya dan punya riwayat di cache
+    if (simulationCache[tabType]) {
+        // Jika ada, langsung tampilkan kembali hasil lamanya
+        document.getElementById('placeholder-text').style.display = 'none';
+        renderVisualResult(simulationCache[tabType]);
+    } else {
+        // Jika belum pernah dijalankan, kembalikan ke tampilan default kosong (placeholder)
+        document.getElementById('result-container').style.display = 'none';
+        document.getElementById('placeholder-text').style.display = 'block';
+    }
+}
+
+// Fungsi bantu untuk merender visualisasi hasil ke komponen UI
+function renderVisualResult(result) {
+    const resBox = document.getElementById('result-container');
+    const statusEl = document.getElementById('result-status');
+    const traceEl = document.getElementById('result-trace');
+    
+    resBox.style.display = 'block';
+    document.getElementById('result-message').innerText = result.message;
+    
+    if (result.status === "accepted" || result.status === "success") {
+        resBox.style.backgroundColor = "#e6f4ea";
+        statusEl.innerText = "SUCCESS / ACCEPTED";
+        statusEl.style.color = "#137333";
+    } else {
+        resBox.style.backgroundColor = "#fce8e6";
+        statusEl.innerText = "REJECTED / ERROR";
+        statusEl.style.color = "#c5221f";
+    }
+
+    if (result.output) {
+        traceEl.innerHTML = `<strong>Path:</strong> ${JSON.stringify(result.trace)} <br><strong>Output String:</strong> ${result.output}`;
+    } else {
+        traceEl.innerText = JSON.stringify(result.trace);
+    }
 }
 
 // Menangani Submit Form Menggunakan Fetch API
@@ -61,7 +102,6 @@ document.getElementById('fsa-form').addEventListener('submit', async function(e)
     const type = document.getElementById('fsa-type').value;
     const inputString = document.getElementById('input-string').value;
     
-    // Gabungkan data konfigurasi mesin default dengan string input dinamis dari user
     const payload = {
         ...defaultData[type],
         input_string: inputString
@@ -76,33 +116,12 @@ document.getElementById('fsa-form').addEventListener('submit', async function(e)
         
         const result = await response.json();
         
-        // Sembunyikan placeholder, tampilkan kotak hasil
+        // Simpan hasil eksekusi teranyar ke dalam cache sesuai tipenya sebelum dirender
+        simulationCache[type] = result;
+        
+        // Sembunyikan placeholder dan tampilkan hasil
         document.getElementById('placeholder-text').style.display = 'none';
-        const resBox = document.getElementById('result-container');
-        resBox.style.display = 'block';
-        
-        const statusEl = document.getElementById('result-status');
-        const traceEl = document.getElementById('result-trace');
-        
-        // Render Hasil Berdasarkan Respon Server
-        document.getElementById('result-message').innerText = result.message;
-        
-        if (result.status === "accepted" || result.status === "success") {
-            resBox.style.backgroundColor = "#e6f4ea";
-            statusEl.innerText = "SUCCESS / ACCEPTED";
-            statusEl.style.color = "#137333";
-        } else {
-            resBox.style.backgroundColor = "#fce8e6";
-            statusEl.innerText = "REJECTED / ERROR";
-            statusEl.style.color = "#c5221f";
-        }
-
-        // Tampilkan lintasan perpindahan state / output mesin jika ada
-        if (result.output) {
-            traceEl.innerHTML = `<strong>Path:</strong> ${JSON.stringify(result.trace)} <br><strong>Output String:</strong> ${result.output}`;
-        } else {
-            traceEl.innerText = JSON.stringify(result.trace);
-        }
+        renderVisualResult(result);
         
     } catch (err) {
         alert("Gagal melakukan simulasi ke server: " + err.message);
