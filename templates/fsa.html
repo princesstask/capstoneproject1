@@ -1,0 +1,63 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="container">
+    <h2>Finite State Automata (FSA)</h2>
+    <p>Pilih tipe mesin otomata di bawah ini untuk memulai.</p>
+
+    <!-- Sistem Tab Navigasi -->
+    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+        <button class="btn tab-btn active" onclick="switchTab('DFA')">DFA</button>
+        <button class="btn tab-btn" onclick="switchTab('NFA')">NFA</button>
+        <button class="btn tab-btn" onclick="switchTab('Moore')">Moore</button>
+        <button class="btn tab-btn" onclick="switchTab('Mealy')">Mealy</button>
+    </div>
+
+    <div class="grid" style="grid-template-columns: 1fr 2fr;">
+        <!-- Panel Input Data Mesin -->
+        <div class="card">
+            <h3 id="panel-title">Konfigurasi Mesin DFA</h3>
+            <hr style="border: 1px solid var(--secondary-color); margin-bottom: 15px;">
+            
+            <form id="fsa-form">
+                <input type="hidden" id="fsa-type" value="DFA">
+                
+                <div style="margin-bottom: 12px;">
+                    <label style="display:block; font-weight:bold; margin-bottom:5px;">Input String Pengujian:</label>
+                    <input type="text" id="input-string" placeholder="Contoh: 0101" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;" required>
+                </div>
+
+                <!-- Area Dinamis Berdasarkan Tipe Mesin -->
+                <div id="dynamic-inputs">
+                    <p style="font-size: 0.9rem; color: #666;">Menggunakan data konfigurasi *default* untuk demo cepat media pembelajaran.</p>
+                </div>
+
+                <button type="submit" class="btn" style="width: 100%; margin-top: 15px;">Jalankan Simulator</button>
+            </form>
+        </div>
+
+        <!-- Panel Output dan Hasil Trace -->
+        <div class="card" style="border-top-color: var(--primary-color);">
+            <h3>Hasil Jejak Simulasi (Trace & Output)</h3>
+            <hr style="border: 1px solid var(--secondary-color); margin-bottom: 15px;">
+            
+            <div id="result-container" style="display: none; padding: 15px; border-radius: 6px;">
+                <h4 id="result-status" style="margin-top: 0;"></h4>
+                <p id="result-message"></p>
+                
+                <h5>Runtunan Perubahan State (Trace Path):</h5>
+                <div id="result-trace" style="font-family: monospace; background: #eee; padding: 10px; border-radius: 4px; overflow-x: auto;">
+                    -
+                </div>
+            </div>
+            
+            <div id="placeholder-text" style="color: #888; text-align: center; padding: 4rem 0;">
+                Silakan masukkan string dan klik tombol "Jalankan Simulator" untuk melihat hasil analisis grafis.
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Menyambungkan ke script pengontrol tab dan request fetch -->
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% endblock %}
